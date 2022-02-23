@@ -1,0 +1,102 @@
+name: hypnotix
+base: core20
+version: '2.6'
+summary: An IPTV streaming application
+description: |
+  An IPTV streaming application.
+grade: stable # must be 'stable' to release into candidate/stable channels or 'devel'
+confinement: devmode   #use classic if all fs required OR if you need local gtk2 theming
+
+parts:
+  hypnotix:
+    plugin: nil
+    source: https://github.com/linuxmint/hypnotix.git
+    source-tag: '2.6'
+    build-packages:
+      - make
+      - gettext
+      - coreutils
+    override-build: |
+      cd $SNAPCRAFT_PART_BUILD
+
+      sed -i "s/\/usr\/lib/\$SNAP\/usr\/lib/g" usr/bin/hypnotix
+
+      sed -i "s/__DEB_VERSION__/2.6/g" usr/lib/hypnotix/hypnotix.py
+
+      make
+
+      install -D     -t $SNAPCRAFT_PART_INSTALL/usr/bin usr/bin/hypnotix
+      install -D     -t $SNAPCRAFT_PART_INSTALL/usr/lib/hypnotix usr/lib/hypnotix/{common,hypnotix}.py
+      install -Dm644 -t $SNAPCRAFT_PART_INSTALL/usr/lib/hypnotix usr/lib/hypnotix/{mpv,xtream}.py
+      install -Dm644 -t $SNAPCRAFT_PART_INSTALL/usr/share/applications usr/share/applications/hypnotix.desktop
+      install -Dm644 -t $SNAPCRAFT_PART_INSTALL/usr/share/glib-2.0/schemas usr/share/glib-2.0/schemas/org.x.hypnotix.gschema.xml
+      install -Dm644 -t $SNAPCRAFT_PART_INSTALL/usr/share/hypnotix usr/share/hypnotix/*.{css,png,ui}
+      install -Dm644 -t $SNAPCRAFT_PART_INSTALL/usr/share/hypnotix/pictures usr/share/hypnotix/pictures/*.svg
+      install -Dm644 -t $SNAPCRAFT_PART_INSTALL/usr/share/hypnotix/pictures/badges usr/share/hypnotix/pictures/badges/*
+      install -Dm644 -t $SNAPCRAFT_PART_INSTALL/usr/share/icons/hicolor/scalable/apps usr/share/icons/hicolor/scalable/apps/hypnotix.svg
+
+      cp -a usr/share/locale $SNAPCRAFT_PART_INSTALL/usr/share/locale
+
+    stage-packages:
+      - gir1.2-xapp-1.0
+      - python3
+      - python3-gi
+      - python3-setproctitle
+      - python3-unidecode
+      - xapps-common
+      - libmpv1
+      - python3-imdbpy
+      - python3-gi-cairo
+      - samba-libs
+
+  desktop-gnome-platform:
+    source: https://github.com/ubuntu/snapcraft-desktop-helpers.git
+    source-subdir: gtk
+    plugin: make
+    make-parameters: ["FLAVOR=gtk3"]
+    build-packages:
+      - gcc
+    override-build: |
+      snapcraftctl build
+      mkdir -pv $SNAPCRAFT_PART_INSTALL/gnome-platform
+
+
+apps:
+  hypnotix:
+    command: bin/desktop-launch $SNAP/usr/bin/hypnotix
+    environment:
+      PYTHONPATH: $SNAP/usr/lib/python3/dist-packages:$SNAP/usr/lib/python3.8/dist-packages:$SNAP/usr/lib/python3.8/site-packages
+    plugs:
+      - opengl
+      - network
+      - desktop
+      - desktop-legacy
+      - gsettings # For desktop theme detection under Wayland session
+      - unity7
+      - x11
+      - wayland
+      - home
+      - removable-media
+  gsettings:
+    command: bin/desktop-launch gsettings
+    plugs: 
+      - gsettings
+
+
+plugs:
+  gnome-3-38-2004:
+    interface: content
+    target: $SNAP/gnome-platform
+    default-provider: gnome-3-38-2004
+  gtk-3-themes:
+    interface: content
+    target: $SNAP/data-dir/themes
+    default-provider: gtk-common-themes
+  icon-themes:
+    interface: content
+    target: $SNAP/data-dir/icons
+    default-provider: gtk-common-themes
+  sound-themes:
+    interface: content
+    target: $SNAP/data-dir/sounds
+    default-provider: gtk-common-themes
